@@ -5,3 +5,14 @@ data/
 *.pkl
 .ipynb_checkpoints/
 mlruns/
+# MLflow
+mlruns/
+mlflow.db
+ml/notebooks/mlflow.db
+
+# Modèles binaires (régénérables)
+*.pkl
+ml/models/best_model.pkl
+
+# Données générées
+ml/data/
