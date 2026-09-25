@@ -105,6 +105,9 @@ def build_context(symbol: str) -> dict:
         except Exception as e:
             print(f"⚠️  Modèle ML non utilisé : {e}")
 
+    # --- Contexte envoyé au LLM ---
+    # ⚠️  On envoie des POURCENTAGES (pas des décimales) pour éviter que le LLM
+    #     se trompe (ex: -0.3852 lu comme -0.38% au lieu de -38.5%)
     context = {
         "symbol": symbol,
         "date": str(last["Date"].date()),
@@ -112,14 +115,14 @@ def build_context(symbol: str) -> dict:
         "tendance": trend,
         "ma20": round(float(last["ma20"]), 2),
         "ma50": round(float(last["ma50"]), 2),
-        "volatilite_annualisee": round(vol_ann, 4),
-        "max_drawdown_historique": round(mdd, 4),
+        "volatilite_annualisee_pct": round(vol_ann * 100, 2),
+        "max_drawdown_pct": round(mdd * 100, 2),
         "sentiment_30j": {
             "score_moyen": round(sent_score, 3),
             "interpretation": sentiment_label,
             "nombre_articles": n_news,
         },
-        "probabilite_hausse_modele_ml": round(ml_proba, 3) if ml_proba is not None else "non disponible",
+        "probabilite_hausse_pct": round(ml_proba * 100, 1) if ml_proba is not None else None,
     }
     return context
 
@@ -138,7 +141,8 @@ def generate_insight(context: dict) -> str:
 
     user_message = (
         "Voici les données calculées pour un actif. Explique-les en français, "
-        "de façon claire et honnête, en signalant les incertitudes :\n\n"
+        "de façon claire et honnête, en signalant les incertitudes. "
+        "Les valeurs en 'pct' sont déjà en pourcentage :\n\n"
         + json.dumps(context, indent=2, ensure_ascii=False)
     )
 
