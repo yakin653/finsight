@@ -16,11 +16,11 @@ class InsightResponse(BaseModel):
     tendance: str
     ma20: float
     ma50: float
-    volatilite_annualisee: float
-    max_drawdown_historique: float
+    volatilite_annualisee_pct: float = Field(..., description="Volatilité annualisée en %")
+    max_drawdown_pct: float = Field(..., description="Max drawdown en %")
     sentiment_30j: SentimentInfo
-    probabilite_hausse_modele_ml: float | None = Field(
-        None, description="Probabilité de hausse selon le modèle ML, entre 0 et 1"
+    probabilite_hausse_pct: float | None = Field(
+        None, description="Probabilité de hausse selon le modèle ML, en %"
     )
-    analyse_llm: str = Field(..., description="Analyse en français générée par Ollama")
+    analyse_llm: str
     disclaimer: str

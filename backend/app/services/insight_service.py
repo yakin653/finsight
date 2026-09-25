@@ -4,7 +4,6 @@ Service insight : combine prix + ML + sentiment + LLM.
 Réutilise la logique de ml/src/insight.py pour éviter la duplication.
 """
 import sys
-import json
 from pathlib import Path
 
 # Ajouter ml/src au path pour importer insight.py
@@ -32,15 +31,8 @@ def get_insight(symbol: str) -> dict:
     context = ml_insight.build_context(symbol)
     analyse = ml_insight.generate_insight(context)
 
-    # On ajoute le disclaimer dans la réponse
+    # On ajoute le disclaimer et l'analyse LLM
     context["disclaimer"] = DISCLAIMER
-
-    # On renomme "probabilite_hausse_modele_ml" si c'est "non disponible"
-    proba = context.get("probabilite_hausse_modele_ml")
-    if proba == "non disponible":
-        context["probabilite_hausse_modele_ml"] = None
-
-    # On ajoute l'analyse LLM
     context["analyse_llm"] = analyse
 
     return context
