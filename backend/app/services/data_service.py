@@ -1,10 +1,23 @@
-"""Logique métier : lecture des prix depuis PostgreSQL."""
+"""Logique metier : lecture des prix depuis PostgreSQL."""
+import math
+
 import pandas as pd
 from sqlalchemy.engine import Engine
 
 
+def _safe_float(x):
+    """Renvoie None si x est NaN, sinon x en float."""
+    if x is None:
+        return None
+    try:
+        f = float(x)
+        return None if math.isnan(f) else f
+    except (TypeError, ValueError):
+        return None
+
+
 def get_available_symbols(engine: Engine) -> list[str]:
-    """Renvoie la liste triée des symboles présents en base."""
+    """Renvoie la liste triee des symboles presents en base."""
     df = pd.read_sql("SELECT DISTINCT symbol FROM market_data ORDER BY symbol", engine)
     return df["symbol"].tolist()
 
@@ -23,13 +36,21 @@ def get_asset_info(engine: Engine, symbol: str) -> dict | None:
     df["ma50"] = df["Close"].rolling(50).mean()
     last = df.iloc[-1]
 
+    ma20 = _safe_float(last["ma20"])
+    ma50 = _safe_float(last["ma50"])
+
+    if ma20 is None or ma50 is None:
+        tendance = "indeterminee"
+    else:
+        tendance = "haussiere" if ma20 > ma50 else "baissiere"
+
     return {
         "symbol": symbol,
         "prix_actuel": float(last["Close"]),
         "date": last["Date"],
-        "tendance": "haussière" if last["ma20"] > last["ma50"] else "baissière",
-        "ma20": float(last["ma20"]),
-        "ma50": float(last["ma50"]),
+        "tendance": tendance,
+        "ma20": ma20 if ma20 is not None else 0.0,
+        "ma50": ma50 if ma50 is not None else 0.0,
     }
 
 
@@ -45,7 +66,6 @@ def get_asset_history(engine: Engine, symbol: str, limit: int = 500) -> dict | N
     if df.empty:
         return None
 
-    # Remettre dans l'ordre chronologique pour les graphiques
     df = df.sort_values("Date").reset_index(drop=True)
 
     return {

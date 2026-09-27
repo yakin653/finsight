@@ -40,7 +40,7 @@ jobs:
 
       - name: Install system deps
         run: |
-          sudo apt-get update
+          sudo apt-get update -qq
           sudo apt-get install -y postgresql-client
 
       - name: Install Python deps
@@ -62,46 +62,12 @@ jobs:
 
       - name: Create tables
         run: |
-          psql -h localhost -U postgres -d finsight <<'SQL'
-            CREATE TABLE IF NOT EXISTS market_data (
-              "Date" TIMESTAMP NOT NULL,
-              "Open" DOUBLE PRECISION,
-              "High" DOUBLE PRECISION,
-              "Low" DOUBLE PRECISION,
-              "Close" DOUBLE PRECISION,
-              "Volume" BIGINT,
-              symbol TEXT NOT NULL,
-              PRIMARY KEY (symbol, "Date")
-            );
-            CREATE TABLE IF NOT EXISTS news (
-              id SERIAL PRIMARY KEY,
-              symbol TEXT NOT NULL,
-              date TIMESTAMP NOT NULL,
-              headline TEXT NOT NULL,
-              url TEXT,
-              source TEXT,
-              pos DOUBLE PRECISION,
-              neu DOUBLE PRECISION,
-              neg DOUBLE PRECISION,
-              UNIQUE (symbol, date, headline)
-            );
-          SQL
+          psql -h localhost -U postgres -d finsight -c "CREATE TABLE IF NOT EXISTS market_data (\"Date\" TIMESTAMP NOT NULL, \"Open\" DOUBLE PRECISION, \"High\" DOUBLE PRECISION, \"Low\" DOUBLE PRECISION, \"Close\" DOUBLE PRECISION, \"Volume\" BIGINT, symbol TEXT NOT NULL, PRIMARY KEY (symbol, \"Date\"));"
+          psql -h localhost -U postgres -d finsight -c "CREATE TABLE IF NOT EXISTS news (id SERIAL PRIMARY KEY, symbol TEXT NOT NULL, date TIMESTAMP NOT NULL, headline TEXT NOT NULL, url TEXT, source TEXT, pos DOUBLE PRECISION, neu DOUBLE PRECISION, neg DOUBLE PRECISION, UNIQUE (symbol, date, headline));"
 
-      - name: Seed test data
+      - name: Seed 61 rows
         run: |
-          psql -h localhost -U postgres -d finsight <<'SQL'
-            DO $$
-            DECLARE
-                i INT;
-                d DATE;
-            BEGIN
-                FOR i IN 0..60 LOOP
-                    d := '2024-01-01'::date + i;
-                    INSERT INTO market_data VALUES
-                        (d, 100 + i, 105 + i, 99 + i, 104 + i, 1000000, 'AAPL');
-                END LOOP;
-            END $$;
-          SQL
+          psql -h localhost -U postgres -d finsight -c "INSERT INTO market_data SELECT ('2024-01-01'::date + i), 100+i, 105+i, 99+i, 104+i, 1000000, 'AAPL' FROM generate_series(0, 60) AS i;"
 
       - name: Run tests
         working-directory: backend

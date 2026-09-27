@@ -1,8 +1,8 @@
-"""Tests d'intégration de l'API FastAPI."""
+"""Tests d'integration de l'API FastAPI."""
 
 
 def test_health(client):
-    """La route /health doit répondre 200 et un statut ok."""
+    """La route /health doit repondre 200 et un statut ok."""
     r = client.get("/health")
     assert r.status_code == 200
     body = r.json()
@@ -27,8 +27,7 @@ def test_get_asset_aapl(client):
     data = r.json()
     assert data["symbol"] == "AAPL"
     assert data["prix_actuel"] > 0
-    # Test sans accent pour eviter les problemes d'encodage
-    assert data["tendance"].startswith("haussi") or data["tendance"].startswith("baissi")
+    assert data["tendance"] in ("haussiere", "baissiere", "indeterminee")
 
 
 def test_get_asset_unknown(client):
