@@ -26,7 +26,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # --- Config Ollama ---
-OLLAMA_URL   = "http://localhost:11434/v1/chat/completions"
+OLLAMA_URL   = os.getenv("OLLAMA_URL", "http://localhost:11434/v1/chat/completions")
 OLLAMA_MODEL = "qwen2.5:3b-instruct"
 
 
