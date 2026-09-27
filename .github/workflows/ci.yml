@@ -1,0 +1,98 @@
+﻿name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Tests + Lint
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: monmdp
+          POSTGRES_DB: finsight
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:monmdp@localhost:5432/finsight
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest httpx ruff
+
+      - name: Lint with ruff
+        run: ruff check .
+
+      - name: Create tables
+        run: |
+          PGPASSWORD=monmdp psql -h localhost -U postgres -d finsight -c "
+            CREATE TABLE IF NOT EXISTS market_data (
+              \"Date\" TIMESTAMP NOT NULL,
+              \"Open\" DOUBLE PRECISION,
+              \"High\" DOUBLE PRECISION,
+              \"Low\" DOUBLE PRECISION,
+              \"Close\" DOUBLE PRECISION,
+              \"Volume\" BIGINT,
+              symbol TEXT NOT NULL,
+              PRIMARY KEY (symbol, \"Date\")
+            );
+            CREATE TABLE IF NOT EXISTS news (
+              id SERIAL PRIMARY KEY,
+              symbol TEXT NOT NULL,
+              date TIMESTAMP NOT NULL,
+              headline TEXT NOT NULL,
+              url TEXT,
+              source TEXT,
+              pos DOUBLE PRECISION,
+              neu DOUBLE PRECISION,
+              neg DOUBLE PRECISION,
+              UNIQUE (symbol, date, headline)
+            );
+          "
+
+      - name: Seed test data
+        run: |
+          PGPASSWORD=monmdp psql -h localhost -U postgres -d finsight -c "
+            INSERT INTO market_data VALUES
+              ('2024-01-01', 100, 105, 99, 104, 1000000, 'AAPL'),
+              ('2024-01-02', 104, 108, 103, 107, 1200000, 'AAPL'),
+              ('2024-01-03', 107, 110, 105, 109, 1100000, 'AAPL');
+          "
+
+      - name: Run tests
+        working-directory: backend
+        env:
+          PYTHONPATH: .
+        run: pytest tests/ -v
+
+  docker-build:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t finsight-backend ./backend

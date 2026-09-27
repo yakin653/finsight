@@ -17,3 +17,12 @@ ml/models/best_model.pkl
 # Données générées
 ml/data/
 _backup/
+# Python testing
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db

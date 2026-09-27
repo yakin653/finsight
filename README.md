@@ -1,3 +1,5 @@
+ [![CI](https://github.com/yakin653/finsight/actions/workflows/ci.yml/badge.svg)](https://github.com/yakin653/finsight/actions/workflows/ci.yml)
+
 \# FinSight
 
 

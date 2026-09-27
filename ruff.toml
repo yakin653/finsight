@@ -1,0 +1,23 @@
+﻿# Configuration ruff pour FinSight
+target-version = "py313"
+line-length = 120
+
+exclude = [
+    ".venv",
+    "__pycache__",
+    "ml/notebooks",
+    "_backup",
+    "docs",
+]
+
+[lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E501",
+    "F401",
+    "E402",
+]
+
+[lint.per-file-ignores]
+"backend/tests/*" = ["F811"]
+"ml/src/*" = ["E402"]
