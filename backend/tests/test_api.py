@@ -27,7 +27,7 @@ def test_get_asset_aapl(client):
     data = r.json()
     assert data["symbol"] == "AAPL"
     assert data["prix_actuel"] > 0
-    # Sans accent pour eviter les problemes d'encodage
+    # Test sans accent pour eviter les problemes d'encodage
     assert data["tendance"].startswith("haussi") or data["tendance"].startswith("baissi")
 
 
