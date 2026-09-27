@@ -475,4 +475,8 @@ Ce projet est \*\*pédagogique\*\*. Les analyses produites par FinSight \*\*ne c
 
 
 MIT — voir \[LICENSE](LICENSE) (à ajouter).
+## 🖥️ Interface utilisateur
+
+![Streamlit UI](docs/streamlit.png)
+
 
