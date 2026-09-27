@@ -16,3 +16,4 @@ ml/models/best_model.pkl
 
 # Données générées
 ml/data/
+_backup/
