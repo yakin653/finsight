@@ -233,7 +233,21 @@
 
 
 \---
+## 🖥️ Interface
 
+### Dashboard principal
+![Dashboard](docs/screenshot_dashboard.png)
+
+### Analyse technique (chandelier + volume)
+![Chandelier](docs/screenshot_chart.png)
+
+### Actualités et sentiment FinBERT
+![News](docs/screenshot_news.png)
+
+### Vue d'ensemble du marché
+![Marché](docs/screenshot_market.png)
+
+---
 
 
 \## 🚀 Démarrage rapide
