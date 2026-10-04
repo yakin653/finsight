@@ -234,6 +234,11 @@
 
 \---
 ## 🖥️ Interface
+### 🎬 Démo (30 s)
+
+[![Démo FinSight](docs/screenshot_dashboard.png)](docs/demo.mp4)
+
+*Cliquez sur l'image pour voir la démo vidéo.*
 
 ### Dashboard principal
 ![Dashboard](docs/screenshot_dashboard.png)
