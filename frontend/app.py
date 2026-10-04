@@ -187,7 +187,7 @@ tab_analyse, tab_news, tab_marche = st.tabs(["📈 Analyse", "📰 News", "🌡 
 
 
 # ===========================================================================
-# ONGLET 1 : Analyse
+# ONGLET 1 : Analyse (chandelier + volume)
 # ===========================================================================
 with tab_analyse:
     st.subheader(f"📈 {symbol} - Historique des prix")
@@ -196,20 +196,66 @@ with tab_analyse:
         hist = requests.get(f"{API_URL}/assets/{symbol}/history?limit=500", timeout=15).json()
         df = pd.DataFrame(hist["points"])
         df["date"] = pd.to_datetime(df["date"])
-        df = df.sort_values("date")
+        df = df.sort_values("date").reset_index(drop=True)
 
+        df["ma20"] = df["close"].rolling(20).mean()
+        df["ma50"] = df["close"].rolling(50).mean()
+
+        # --- Graphique chandelier ---
         fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=df["date"], y=df["close"], mode="lines",
-            name="Close", line=dict(color="#3b82f6", width=2),
+
+        fig.add_trace(go.Candlestick(
+            x=df["date"],
+            open=df["open"], high=df["high"],
+            low=df["low"],  close=df["close"],
+            name="Prix",
+            increasing_line_color="#10b981",
+            decreasing_line_color="#ef4444",
         ))
+
+        fig.add_trace(go.Scatter(
+            x=df["date"], y=df["ma20"], mode="lines",
+            name="MA20", line=dict(color="#f59e0b", width=1.5),
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=df["date"], y=df["ma50"], mode="lines",
+            name="MA50", line=dict(color="#ef4444", width=1.5),
+        ))
+
         fig.update_layout(
-            height=400, margin=dict(l=0, r=0, t=10, b=0),
+            height=450,
+            margin=dict(l=0, r=0, t=10, b=0),
             xaxis_title="Date", yaxis_title="Prix ($)",
-            hovermode="x unified", showlegend=False,
-            template="plotly_dark", paper_bgcolor="#0a0e1a",
+            template="plotly_dark",
+            paper_bgcolor="#0a0e1a",
+            plot_bgcolor="#0a0e1a",
+            hovermode="x unified",
+            xaxis_rangeslider_visible=False,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
         st.plotly_chart(fig, use_container_width=True)
+
+        # --- Sous-graphique Volume ---
+        colors = ["#10b981" if c >= o else "#ef4444"
+                  for c, o in zip(df["close"], df["open"])]
+
+        fig_vol = go.Figure()
+        fig_vol.add_trace(go.Bar(
+            x=df["date"], y=df["volume"],
+            marker_color=colors, name="Volume",
+        ))
+        fig_vol.update_layout(
+            height=150,
+            margin=dict(l=0, r=0, t=10, b=0),
+            xaxis_title="", yaxis_title="Volume",
+            template="plotly_dark",
+            paper_bgcolor="#0a0e1a",
+            plot_bgcolor="#0a0e1a",
+            showlegend=False,
+        )
+        st.plotly_chart(fig_vol, use_container_width=True)
+
     except Exception as e:
         st.error(f"❌ Erreur graphique : {e}")
 
