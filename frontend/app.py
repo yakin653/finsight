@@ -362,11 +362,105 @@ with tab_news:
 
 # ===========================================================================
 # ONGLET 3 : Marche (placeholder)
+# =======================================================# ===========================================================================
+# ONGLET 3 : Marche (vue multi-actifs)
 # ===========================================================================
 with tab_marche:
-    st.subheader("🌡 Vue du marche")
-    st.info("🚧 Cet onglet affichera bientot une vue d ensemble des 10 actifs.")
+    st.subheader("🌡 Vue d'ensemble du marche")
+    st.caption(f"{len(symbols)} actifs suivis - tri par performance du jour")
 
+    # --- Recuperer les donnees de tous les actifs ---
+    @st.cache_data(ttl=300)  # cache 5 min
+    def load_market_data(symbols_list):
+        rows = []
+        for s in symbols_list:
+            try:
+                # Infos prix
+                info_s = requests.get(f"{API_URL}/assets/{s}", timeout=10).json()
+                # Historique 2 derniers points pour la variation
+                hist_s = requests.get(
+                    f"{API_URL}/assets/{s}/history?limit=2",
+                    timeout=10,
+                ).json()
+                # Signal
+                try:
+                    sig_s = requests.get(f"{API_URL}/signal/{s}", timeout=10).json()
+                except Exception:
+                    sig_s = None
 
-st.divider()
-st.caption("⚠️ Projet pedagogique. Aucune information ne constitue un conseil financier.")
+                # Variation du jour (dernier vs avant-dernier)
+                pts = hist_s.get("points", [])
+                if len(pts) >= 2:
+                    last_close = pts[-1]["close"]
+                    prev_close = pts[-2]["close"]
+                    variation = (last_close - prev_close) / prev_close * 100 if prev_close else 0
+                else:
+                    variation = 0
+
+                rows.append({
+                    "symbol": s,
+                    "prix": info_s.get("prix_actuel", 0),
+                    "variation": variation,
+                    "tendance": info_s.get("tendance", "?"),
+                    "signal": sig_s["signal"] if sig_s else "?",
+                    "emoji": sig_s["emoji"] if sig_s else "❓",
+                    "confidence": sig_s["confidence_pct"] if sig_s else 0,
+                })
+            except Exception as e:
+                rows.append({
+                    "symbol": s, "prix": 0, "variation": 0,
+                    "tendance": "erreur", "signal": "?", "emoji": "❓", "confidence": 0,
+                })
+        return pd.DataFrame(rows)
+
+    with st.spinner("Chargement des donnees du marche..."):
+        market_df = load_market_data(symbols)
+
+    # Tri par variation decroissante
+    market_df = market_df.sort_values("variation", ascending=False).reset_index(drop=True)
+
+    # --- Affichage en grille (3 colonnes) ---
+    cols_per_row = 3
+    for i in range(0, len(market_df), cols_per_row):
+        cols = st.columns(cols_per_row)
+        for j, col in enumerate(cols):
+            if i + j >= len(market_df):
+                break
+            row = market_df.iloc[i + j]
+            with col:
+                # Choix de la couleur
+                var = row["variation"]
+                var_color = "#10b981" if var > 0 else "#ef4444" if var < 0 else "#9ca3af"
+                var_arrow = "▲" if var > 0 else "▼" if var < 0 else "▬"
+
+                sig_color = {
+                    "ACHAT": "#10b981",
+                    "VENTE": "#ef4444",
+                    "NEUTRE": "#eab308",
+                }.get(row["signal"], "#6b7280")
+
+                st.markdown(f"""
+                <div style="
+                    background: linear-gradient(135deg, #131826 0%, #1a2033 100%);
+                    border: 1px solid #232a3d;
+                    border-left: 4px solid {sig_color};
+                    border-radius: 12px;
+                    padding: 16px;
+                    margin-bottom: 12px;
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 20px; font-weight: 700; color: #e5e7eb;">{row['symbol']}</span>
+                        <span style="font-size: 18px;">{row['emoji']}</span>
+                    </div>
+                    <div style="font-size: 26px; font-weight: 600; color: #e5e7eb; margin: 8px 0;">
+                        {row['prix']:.2f} $
+                    </div>
+                    <div style="font-size: 14px; color: {var_color}; font-weight: 600;">
+                        {var_arrow} {var:+.2f} %
+                    </div>
+                    <div style="font-size: 12px; color: #9ca3af; margin-top: 8px;">
+                        Signal : <b style="color: {sig_color};">{row['signal']}</b>
+                        &nbsp;·&nbsp; Confiance : {row['confidence']:.0f}%
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
