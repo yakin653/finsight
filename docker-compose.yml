@@ -20,31 +20,18 @@ services:
   backend:
     build: ./backend
     container_name: finsight-backend
-
     environment:
-      # ⚠️ Dans Docker, la base s'appelle "db" (nom du service)
       DATABASE_URL: postgresql://postgres:monmdp@db:5432/finsight
-      # ⚠️ Ollama tourne sur ta machine hôte
       OLLAMA_URL: http://host.docker.internal:11434/v1/chat/completions
     ports:
       - "8000:8000"
     volumes:
-      # Monter ml/src pour que insight_service.py puisse importer insight.py
       - ./ml:/ml
       - ./ml/models:/ml/models
     depends_on:
       db:
         condition: service_healthy
-
-  # --- MLflow (optionnel, commenté pour l'instant) ---
-  # mlflow:
-  #   image: ghcr.io/mlflow/mlflow
-  #   container_name: finsight-mlflow
-  #   command: mlflow server --host 0.0.0.0 --backend-store-uri sqlite:////mlflow/mlflow.db
-  #   ports:
-  #     - "5000:5000"
-  #   volumes:
-  #     - mlflow_data:/mlflow
+    stop_grace_period: 5s
 
 volumes:
   pgdata:
