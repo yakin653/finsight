@@ -7,18 +7,18 @@ Lancement :
 """
 from fastapi import FastAPI
 
-from app.routers import assets, insight, news
+from app.routers import assets, insight, news, signal
 
 app = FastAPI(
     title="FinSight API",
-    description="API d'analyse financiere : prix, ML, sentiment, LLM.",
-    version="0.2.0",
+    description="API d analyse financiere : prix, ML, sentiment, LLM, signal.",
+    version="0.3.0",
 )
 
 
 @app.get("/health", tags=["Health"])
 def health():
-    """Verifie que l'API est en ligne."""
+    """Verifie que l API est en ligne."""
     return {"status": "ok", "service": "finsight-api"}
 
 
@@ -26,3 +26,4 @@ def health():
 app.include_router(assets.router)
 app.include_router(insight.router)
 app.include_router(news.router)
+app.include_router(signal.router)

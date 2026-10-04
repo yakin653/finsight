@@ -1,10 +1,9 @@
 """
 FinSight - Interface Streamlit.
 
-Dashboard financier avec 3 onglets :
-- Analyse : graphique + insight IA
-- News : sentiment FinBERT visible
-- Marche : vue multi-actifs (a venir)
+Dashboard financier avec :
+- Signal ACHAT/VENTE/NEUTRE en haut
+- 3 onglets : Analyse / News / Marche
 
 Lancement :
     streamlit run frontend/app.py
@@ -19,7 +18,6 @@ import streamlit as st
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 
-# --- Config de la page ---
 st.set_page_config(
     page_title="FinSight",
     page_icon="📊",
@@ -27,27 +25,35 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# --- CSS custom (pour peaufiner le look) ---
 st.markdown("""
 <style>
-    .metric-card {
+    .verdict-card {
         background: linear-gradient(135deg, #131826 0%, #1a2033 100%);
-        padding: 1rem;
-        border-radius: 12px;
+        padding: 1.5rem;
+        border-radius: 16px;
         border: 1px solid #232a3d;
+        margin-bottom: 1rem;
     }
+    .verdict-buy    { border-left: 6px solid #10b981; }
+    .verdict-sell   { border-left: 6px solid #ef4444; }
+    .verdict-hold   { border-left: 6px solid #eab308; }
+    .verdict-signal { font-size: 32px; font-weight: 700; margin: 0; }
+    .verdict-label  { font-size: 13px; color: #9ca3af; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+    .verdict-conf   { font-size: 24px; font-weight: 600; margin-top: 4px; }
+    .factor-row {
+        display: flex; justify-content: space-between;
+        padding: 6px 0; border-bottom: 1px solid #232a3d;
+    }
+    .factor-name { color: #d1d5db; }
+    .factor-score-pos { color: #10b981; font-weight: 600; }
+    .factor-score-neg { color: #ef4444; font-weight: 600; }
+    .factor-score-neu { color: #eab308; font-weight: 600; }
     .news-positive { border-left: 4px solid #10b981; padding-left: 12px; }
     .news-negative { border-left: 4px solid #ef4444; padding-left: 12px; }
     .news-neutral  { border-left: 4px solid #eab308; padding-left: 12px; }
     .news-headline { font-size: 15px; font-weight: 500; margin: 0; }
     .news-meta     { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-    .badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 600;
-    }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
     .badge-pos { background: #10b981; color: white; }
     .badge-neg { background: #ef4444; color: white; }
     .badge-neu { background: #eab308; color: black; }
@@ -55,24 +61,20 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ---------------------------------------------------------------------------
-# Header
-# ---------------------------------------------------------------------------
+# --- Header ---
 col_logo, col_status = st.columns([4, 1])
 with col_logo:
     st.title("📊 FinSight")
     st.caption("Analyse financiere propulsee par ML + NLP + LLM local")
 with col_status:
     try:
-        health = requests.get(f"{API_URL}/health", timeout=3).json()
+        requests.get(f"{API_URL}/health", timeout=3)
         st.success("🟢 API en ligne")
     except Exception:
         st.error("🔴 API hors ligne")
 
 
-# ---------------------------------------------------------------------------
-# Sidebar - Selection de l actif
-# ---------------------------------------------------------------------------
+# --- Sidebar ---
 with st.sidebar:
     st.header("⚙️ Parametres")
 
@@ -92,31 +94,95 @@ with st.sidebar:
     st.caption(f"Heure : {datetime.now().strftime('%H:%M:%S')}")
 
 
-# ---------------------------------------------------------------------------
-# Recuperer les infos de l actif (utilise dans tous les onglets)
-# ---------------------------------------------------------------------------
+# --- Charger les donnees ---
 try:
     info = requests.get(f"{API_URL}/assets/{symbol}", timeout=10).json()
 except Exception as e:
-    st.error(f"❌ Impossible de charger les infos de {symbol} : {e}")
+    st.error(f"❌ Impossible de charger {symbol} : {e}")
     st.stop()
 
+try:
+    signal_data = requests.get(f"{API_URL}/signal/{symbol}", timeout=10).json()
+except Exception:
+    signal_data = None
 
-# ---------------------------------------------------------------------------
-# Cartes de metriques en haut (toujours visibles)
-# ---------------------------------------------------------------------------
+
+# --- Metriques rapides ---
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Prix actuel", f"{info['prix_actuel']:.2f} $")
 col2.metric("MA20", f"{info['ma20']:.2f} $")
 col3.metric("MA50", f"{info['ma50']:.2f} $")
 col4.metric("Tendance", info["tendance"])
 
+
+# --- CARTE VERDICT (le signal en gros) ---
+if signal_data:
+    sig = signal_data["signal"]
+    css_class = {
+        "ACHAT": "verdict-buy",
+        "VENTE": "verdict-sell",
+        "NEUTRE": "verdict-hold",
+    }.get(sig, "verdict-hold")
+
+    col_card, col_gauge = st.columns([2, 1])
+
+    with col_card:
+        st.markdown(f"""
+        <div class="verdict-card {css_class}">
+            <p class="verdict-label">Signal global</p>
+            <p class="verdict-signal">{signal_data['emoji']} {sig}</p>
+            <p class="verdict-conf">Confiance : {signal_data['confidence_pct']:.0f}%</p>
+            <p style="color:#9ca3af; font-size: 13px; margin-top: 8px;">
+                Score composite : <b>{signal_data['score']:+.2f} / {signal_data['max_score']:.1f}</b>
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Les 3 facteurs
+        comps = signal_data["components"]
+        for key, label in [("technique", "📈 Technique"), ("sentiment", "📰 Sentiment"), ("ml", "🤖 ML")]:
+            c = comps[key]
+            score = c["score"]
+            css = "factor-score-pos" if score > 0 else "factor-score-neg" if score < 0 else "factor-score-neu"
+            st.markdown(f"""
+            <div class="factor-row">
+                <span class="factor-name">{label} — {c['reason']}</span>
+                <span class="{css}">{score:+.1f}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+    with col_gauge:
+        # Jauge circulaire de confiance
+        fig_gauge = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=signal_data["confidence_pct"],
+            number={"suffix": "%", "font": {"size": 36, "color": "#e5e7eb"}},
+            gauge={
+                "axis": {"range": [0, 100], "tickcolor": "#6b7280"},
+                "bar": {"color": "#10b981" if sig == "ACHAT" else "#ef4444" if sig == "VENTE" else "#eab308"},
+                "bgcolor": "#131826",
+                "borderwidth": 2,
+                "bordercolor": "#232a3d",
+                "steps": [
+                    {"range": [0, 40], "color": "#1f2937"},
+                    {"range": [40, 70], "color": "#374151"},
+                    {"range": [70, 100], "color": "#4b5563"},
+                ],
+            },
+        ))
+        fig_gauge.update_layout(
+            height=250,
+            margin=dict(l=20, r=20, t=40, b=10),
+            template="plotly_dark",
+            paper_bgcolor="#0a0e1a",
+            font={"color": "#e5e7eb"},
+        )
+        st.plotly_chart(fig_gauge, use_container_width=True)
+
 st.divider()
 
 
-# ---------------------------------------------------------------------------
-# 3 onglets
-# ---------------------------------------------------------------------------
+# --- 3 onglets ---
 tab_analyse, tab_news, tab_marche = st.tabs(["📈 Analyse", "📰 News", "🌡 Marche"])
 
 
@@ -127,10 +193,7 @@ with tab_analyse:
     st.subheader(f"📈 {symbol} - Historique des prix")
 
     try:
-        hist = requests.get(
-            f"{API_URL}/assets/{symbol}/history?limit=500",
-            timeout=15,
-        ).json()
+        hist = requests.get(f"{API_URL}/assets/{symbol}/history?limit=500", timeout=15).json()
         df = pd.DataFrame(hist["points"])
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values("date")
@@ -141,23 +204,21 @@ with tab_analyse:
             name="Close", line=dict(color="#3b82f6", width=2),
         ))
         fig.update_layout(
-            height=400,
-            margin=dict(l=0, r=0, t=10, b=0),
+            height=400, margin=dict(l=0, r=0, t=10, b=0),
             xaxis_title="Date", yaxis_title="Prix ($)",
-            hovermode="x unified",
-            showlegend=False,
-            template="plotly_dark",
+            hovermode="x unified", showlegend=False,
+            template="plotly_dark", paper_bgcolor="#0a0e1a",
         )
         st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
-        st.error(f"❌ Erreur de graphique : {e}")
+        st.error(f"❌ Erreur graphique : {e}")
 
     st.divider()
     st.subheader("🤖 Analyse IA")
     st.caption("Analyse generee par un LLM local (Ollama + Qwen2.5). 30 a 60 secondes.")
 
     if st.button("✨ Generer l analyse", type="primary", key="btn_insight"):
-        with st.spinner("Interrogation du LLM... (patience, ca tourne sur CPU)"):
+        with st.spinner("Interrogation du LLM... (patience)"):
             try:
                 resp = requests.get(f"{API_URL}/insight/{symbol}", timeout=180)
                 resp.raise_for_status()
@@ -172,10 +233,7 @@ with tab_analyse:
                     mc3.metric("Prob. hausse (ML)", "n/d")
 
                 s = data["sentiment_30j"]
-                st.markdown(
-                    f"**Sentiment news (30j)** : **{s['interpretation']}** "
-                    f"(score {s['score_moyen']}, {s['nombre_articles']} articles)"
-                )
+                st.markdown(f"**Sentiment news (30j)** : **{s['interpretation']}** (score {s['score_moyen']}, {s['nombre_articles']} articles)")
 
                 st.info(data["analyse_llm"])
                 st.caption(data["disclaimer"])
@@ -190,15 +248,11 @@ with tab_news:
     st.subheader(f"📰 News & Sentiment - {symbol}")
 
     try:
-        news_data = requests.get(
-            f"{API_URL}/news/{symbol}?days=30&limit=50",
-            timeout=15,
-        ).json()
+        news_data = requests.get(f"{API_URL}/news/{symbol}?days=30&limit=50", timeout=15).json()
 
         if news_data["count"] == 0:
-            st.info(f"Aucune news disponible pour {symbol} sur les 30 derniers jours.")
+            st.info(f"Aucune news pour {symbol} sur les 30 derniers jours.")
         else:
-            # --- Score de sentiment agrege ---
             score = news_data["sentiment_score"]
             interpretation = news_data["interpretation"]
 
@@ -214,12 +268,9 @@ with tab_news:
 
             st.divider()
 
-            # --- Graphique du sentiment dans le temps ---
             df_news = pd.DataFrame(news_data["news"])
             df_news["date"] = pd.to_datetime(df_news["date"])
             df_news = df_news.sort_values("date")
-
-            # Score par jour (pos - neg)
             df_news["sent"] = df_news["pos"] - df_news["neg"]
             daily = df_news.groupby(df_news["date"].dt.date)["sent"].mean().reset_index()
             daily.columns = ["date", "sent"]
@@ -228,33 +279,23 @@ with tab_news:
             fig2.add_trace(go.Bar(
                 x=daily["date"], y=daily["sent"],
                 marker_color=["#10b981" if v > 0 else "#ef4444" for v in daily["sent"]],
-                name="Sentiment",
             ))
             fig2.update_layout(
-                height=250,
-                margin=dict(l=0, r=0, t=10, b=0),
+                height=250, margin=dict(l=0, r=0, t=10, b=0),
                 xaxis_title="Date", yaxis_title="Score (pos - neg)",
-                template="plotly_dark",
+                template="plotly_dark", paper_bgcolor="#0a0e1a",
                 showlegend=False,
             )
             st.plotly_chart(fig2, use_container_width=True)
 
             st.divider()
-
-            # --- Liste des news ---
             st.markdown(f"### 📰 {news_data['count']} dernieres news")
 
             for item in news_data["news"][:30]:
                 sent = item["sentiment"]
-                if sent == "positive":
-                    css_class = "news-positive"
-                    badge = '<span class="badge badge-pos">POSITIF</span>'
-                elif sent == "negative":
-                    css_class = "news-negative"
-                    badge = '<span class="badge badge-neg">NEGATIF</span>'
-                else:
-                    css_class = "news-neutral"
-                    badge = '<span class="badge badge-neu">NEUTRE</span>'
+                css_class = "news-positive" if sent == "positive" else "news-negative" if sent == "negative" else "news-neutral"
+                badge_class = "badge-pos" if sent == "positive" else "badge-neg" if sent == "negative" else "badge-neu"
+                badge_label = "POSITIF" if sent == "positive" else "NEGATIF" if sent == "negative" else "NEUTRE"
 
                 date_str = pd.to_datetime(item["date"]).strftime("%d %b %Y")
                 source = item.get("source") or "source inconnue"
@@ -264,17 +305,13 @@ with tab_news:
 
                 st.markdown(f"""
                 <div class="{css_class}" style="margin-bottom: 14px;">
-                    <p class="news-headline">{badge} &nbsp; {headline}</p>
-                    <p class="news-meta">
-                        {date_str} · {source} ·&nbsp;
-                        <a href="{url}" target="_blank">Lire l article</a>
-                        &nbsp;|&nbsp; pos {pos:.2f} · neu {neu:.2f} · neg {neg:.2f}
-                    </p>
+                    <p class="news-headline"><span class="badge {badge_class}">{badge_label}</span> &nbsp; {headline}</p>
+                    <p class="news-meta">{date_str} · {source} · <a href="{url}" target="_blank">Lire l article</a> &nbsp;|&nbsp; pos {pos:.2f} · neu {neu:.2f} · neg {neg:.2f}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"❌ Erreur lors du chargement des news : {e}")
+        st.error(f"❌ Erreur news : {e}")
 
 
 # ===========================================================================
@@ -282,12 +319,8 @@ with tab_news:
 # ===========================================================================
 with tab_marche:
     st.subheader("🌡 Vue du marche")
-    st.info("🚧 Cet onglet affichera bientot une vue d ensemble des 10 actifs "
-            "(performance du jour, signal, tendance). Reste branche !")
+    st.info("🚧 Cet onglet affichera bientot une vue d ensemble des 10 actifs.")
 
 
-# ---------------------------------------------------------------------------
-# Footer
-# ---------------------------------------------------------------------------
 st.divider()
 st.caption("⚠️ Projet pedagogique. Aucune information ne constitue un conseil financier.")
