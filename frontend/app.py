@@ -205,11 +205,11 @@ with tab_news:
             c1, c2, c3 = st.columns([1, 2, 1])
             with c2:
                 if interpretation == "positif":
-                    st.success(f"### 🟢 Sentiment : POSITIF")
+                    st.success("### 🟢 Sentiment : POSITIF")
                 elif interpretation == "negatif":
-                    st.error(f"### 🔴 Sentiment : NEGATIF")
+                    st.error("### 🔴 Sentiment : NEGATIF")
                 else:
-                    st.warning(f"### 🟡 Sentiment : NEUTRE")
+                    st.warning("### 🟡 Sentiment : NEUTRE")
                 st.caption(f"Score agrege : **{score:+.4f}** sur {news_data['count']} articles")
 
             st.divider()
