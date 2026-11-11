@@ -1,0 +1,7 @@
+{
+  "modele": "RandomForest",
+  "precision_modele": 0.527,
+  "baseline_toujours_hausse": 0.5291375291375291,
+  "source": "Évaluation documentée du projet sur AAPL 2018-2026. La baseline est aussi dans baseline.json.",
+  "avantage_prouve": false
+}

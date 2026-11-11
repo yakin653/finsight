@@ -1,0 +1,32 @@
+# MarketPulse API sur Render (gratuit) — voir docs/DEPLOY-API-RENDER.md
+services:
+  - type: web
+    name: marketpulse-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      # Même Python que l'image Docker et la CI : numpy 2.5 (requirements.txt) exige Python >= 3.12.
+      - key: PYTHON_VERSION
+        value: 3.13.2
+      # Base Neon : coller la chaîne Neon en remplaçant postgresql://
+      # par postgresql+psycopg:// (voir le guide, étape 2).
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://marketpulse-zeta-jet.vercel.app,http://localhost:3000,http://127.0.0.1:3000
+      - key: APP_PUBLIC_URL
+        value: https://marketpulse-zeta-jet.vercel.app
+      - key: APP_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: KNOWLEDGE_DIR
+        value: /opt/render/project/src/knowledge
+      - key: MARKET_REFRESH_ON_START
+        value: "1"

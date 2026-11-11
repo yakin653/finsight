@@ -1,11 +1,17 @@
-fastapi==0.115.0
-uvicorn[standard]==0.32.0
-pydantic==2.9.2
-sqlalchemy==2.0.54
-psycopg2-binary==2.9.13
-pandas==2.2.3
-numpy==2.1.3
-python-dotenv==1.0.1
-requests==2.32.3
-joblib==1.4.2
-prometheus-fastapi-instrumentator==7.0.0
+# Versions épinglées : celles de l'environnement validé (Python 3.13, image python:3.13-slim).
+# Tout ce que backend/app importe est ici ; rien n'est installé à la main dans l'image.
+fastapi==0.162.0
+uvicorn==0.54.0
+sqlalchemy==2.1.6
+psycopg[binary]==3.3.6
+httpx==0.28.1
+pydantic==2.14.1
+prometheus-fastapi-instrumentator==8.1.0
+numpy==2.5.4
+scikit-learn==1.9.1
+joblib==1.6.0
+bcrypt==5.0.0
+PyJWT==2.15.1
+apscheduler==3.11.3
+# Web Push (app/jobs.py, app/routers/inbox.py) ; fournit aussi py_vapid pour scripts/gen_vapid.py.
+pywebpush==2.5.0

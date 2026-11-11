@@ -2,7 +2,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 import os
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:monmdp@db:5432/finsight")
+# psycopg 3 exige le schéma postgresql+psycopg. « db » est le service Docker.
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg://postgres:monmdp@db:5432/finsight")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

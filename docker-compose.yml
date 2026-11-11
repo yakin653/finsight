@@ -1,37 +1,71 @@
 services:
-  # --- PostgreSQL ---
+  # PostgreSQL. Le mot de passe par défaut correspond au volume déjà créé.
   db:
     image: postgres:16
     container_name: finsight-db
     environment:
-      POSTGRES_PASSWORD: monmdp
-      POSTGRES_DB: finsight
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-monmdp}
+      POSTGRES_DB: ${POSTGRES_DB:-finsight}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-finsight}"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
 
-  # --- Backend FastAPI ---
+  # API FastAPI. Ollama reste sur la machine : host.docker.internal.
   backend:
     build: ./backend
     container_name: finsight-backend
     environment:
-      DATABASE_URL: postgresql://postgres:monmdp@db:5432/finsight
-      OLLAMA_URL: http://host.docker.internal:11434/v1/chat/completions
+      # psycopg v3 : le schéma doit être postgresql+psycopg, pas postgresql://
+      DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-monmdp}@db:5432/${POSTGRES_DB:-finsight}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+      MARKET_REFRESH_ON_START: ${MARKET_REFRESH_ON_START:-1}
+      JWT_SECRET: ${JWT_SECRET:-change-me-marketpulse-dev-secret-32b}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:marketpulse@localhost}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-marketpulse@localhost}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      APP_ENV: ${APP_ENV:-development}
+      DEV_LOG_RESET_LINKS: ${DEV_LOG_RESET_LINKS:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8000:8000"
     volumes:
+      # Le code Python est monté : un correctif est pris sans reconstruire l'image.
+      - ./backend/app:/app/app
       - ./ml:/ml
+      - ./knowledge:/knowledge
       - ./ml/models:/ml/models
     depends_on:
       db:
         condition: service_healthy
     stop_grace_period: 5s
+
+  # Boîte mail locale, uniquement avec : docker compose --profile mail up -d
+  mailpit:
+    image: axllent/mailpit
+    container_name: finsight-mailpit
+    profiles: ["mail"]
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
   pgdata:

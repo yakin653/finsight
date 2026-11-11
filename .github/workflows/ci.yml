@@ -26,8 +26,11 @@ jobs:
           --health-retries 10
 
     env:
-      DATABASE_URL: postgresql://postgres:monmdp@localhost:5432/finsight
+      # Base jetable du job. psycopg 3 : le schéma doit être postgresql+psycopg.
+      DATABASE_URL: postgresql+psycopg://postgres:monmdp@localhost:5432/finsight
       PGPASSWORD: monmdp
+      # Aucun appel à Yahoo pendant la CI : la base vide reçoit des séries simulées.
+      MARKET_REFRESH_ON_START: "0"
 
     steps:
       - name: Checkout
@@ -47,7 +50,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
-          pip install pytest httpx ruff
+          pip install pytest ruff
 
       - name: Lint with ruff
         run: ruff check .
@@ -60,14 +63,14 @@ jobs:
             sleep 2
           done
 
-      - name: Create tables
+      # Les tables sont créées par l'application (app.main). Sans réseau, ensure_market_data
+      # remplit la base vide avec des séries simulées, marquées comme telles.
+      - name: Create tables and seed simulated quotes
+        working-directory: backend
+        env:
+          PYTHONPATH: .
         run: |
-          psql -h localhost -U postgres -d finsight -c "CREATE TABLE IF NOT EXISTS market_data (\"Date\" TIMESTAMP NOT NULL, \"Open\" DOUBLE PRECISION, \"High\" DOUBLE PRECISION, \"Low\" DOUBLE PRECISION, \"Close\" DOUBLE PRECISION, \"Volume\" BIGINT, symbol TEXT NOT NULL, PRIMARY KEY (symbol, \"Date\"));"
-          psql -h localhost -U postgres -d finsight -c "CREATE TABLE IF NOT EXISTS news (id SERIAL PRIMARY KEY, symbol TEXT NOT NULL, date TIMESTAMP NOT NULL, headline TEXT NOT NULL, url TEXT, source TEXT, pos DOUBLE PRECISION, neu DOUBLE PRECISION, neg DOUBLE PRECISION, UNIQUE (symbol, date, headline));"
-
-      - name: Seed 61 rows
-        run: |
-          psql -h localhost -U postgres -d finsight -c "INSERT INTO market_data SELECT ('2024-01-01'::date + i), 100+i, 105+i, 99+i, 104+i, 1000000, 'AAPL' FROM generate_series(0, 60) AS i;"
+          python -c "import app.main; from app.database import SessionLocal; from app.market_refresh import ensure_market_data; db = SessionLocal(); ensure_market_data(db); db.close()"
 
       - name: Run tests
         working-directory: backend

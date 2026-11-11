@@ -406,7 +406,7 @@ with tab_marche:
                     "emoji": sig_s["emoji"] if sig_s else "❓",
                     "confidence": sig_s["confidence_pct"] if sig_s else 0,
                 })
-            except Exception as e:
+            except Exception:
                 rows.append({
                     "symbol": s, "prix": 0, "variation": 0,
                     "tendance": "erreur", "signal": "?", "emoji": "❓", "confidence": 0,

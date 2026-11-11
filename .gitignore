@@ -1,5 +1,7 @@
 ﻿.venv/
 .env
+.env.*
+!.env.example
 __pycache__/
 data/
 *.pkl
@@ -26,3 +28,21 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+.neon
+node_modules/
+
+# Sauvegardes, exports de base et journaux locaux
+*.bak
+*.dump
+*.log
+
+# Outillage local (Neon CLI, agents, MCP) : hors de la version validée.
+# neon.ts, package.json et package-lock.json viennent de « neon init » ; l'API n'en dépend pas.
+/neon.ts
+/package.json
+/package-lock.json
+.agents/
+skills-lock.json
+.cursor/
+.mcp.json
+mcp.json
