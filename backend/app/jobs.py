@@ -12,6 +12,7 @@ from .database import SessionLocal
 from .delivery import delivery_mode, matches_interest
 from .models import AlertRule, MarketData, NewsItem, Notification, PushSubscription, UserProfile, UserSymbol
 from .news_feed import fetch_headlines
+from .notify_mail import email_notification
 
 
 def watched_symbols(db) -> list[str]:
@@ -53,6 +54,8 @@ def _notify(db, user_id: str, title: str, body: str, symbol: str | None, news_id
     )
     db.add(row)
     db.commit()
+    # Toutes les notifications (titres, résumé, alerte, briefing) passent ici : une seule règle pour l'e-mail.
+    email_notification(db, user_id, row.title, row.body)
     return row
 
 

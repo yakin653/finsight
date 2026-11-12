@@ -22,10 +22,13 @@ def _hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def public_reset_link(token: str) -> str:
+def public_site_url() -> str:
     """L'adresse vient de APP_PUBLIC_URL, jamais de l'en-tête Host."""
-    base = os.getenv("APP_PUBLIC_URL", "http://localhost:3000").rstrip("/")
-    return f"{base}/reset-password?token={token}"
+    return os.getenv("APP_PUBLIC_URL", "http://localhost:3000").rstrip("/")
+
+
+def public_reset_link(token: str) -> str:
+    return f"{public_site_url()}/reset-password?token={token}"
 
 
 def log_reset_links() -> bool:

@@ -131,6 +131,8 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/assets/refresh
 
 Le démarrage relit Yahoo si le dernier horodatage (`app_meta.refreshed_at`, date et heure avec fuseau) est antérieur au dernier jour de bourse. Un second passage est planifié du lundi au vendredi à 21:30 UTC.
 
+**Notifications par e-mail.** Dans le profil, la case « Recevoir aussi mes notifications par e-mail » (`notif_prefs.email`, désactivée par défaut) fait recopier chaque notification (titres, résumé, alerte, briefing) à l'adresse du compte. L'envoi part du serveur (`backend/app/notify_mail.py`) : il ne dépend pas d'une session ouverte. Au plus 10 e-mails par jour et par compte (compteur en mémoire). Il utilise les mêmes variables `SMTP_*` que le code de connexion : avec Mailpit, les messages arrivent sur http://localhost:8025 ; sans `SMTP_HOST`, rien ne part.
+
 Les fiches sont dans `knowledge/` (montées sur `/knowledge`). Le chat calcule d'abord une réponse en Python à partir des faits en base et des fiches ; Ollama ne fait que la reformuler, et le texte reformulé n'est gardé que s'il passe le contrôle `validate_chat_answer` (`backend/app/chat_engine.py`). Sans Ollama, ou s'il ne répond pas en 30 secondes, la réponse Python est servie telle quelle. Résultats mesurés : `docs/chat-evaluation.md` (sans Ollama, régénéré par pytest sur demande) et `docs/chat-evaluation-ollama.md` (relevé manuel avec Ollama).
 
 ## Déploiement

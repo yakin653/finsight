@@ -126,11 +126,22 @@ def push_test(user: User = Depends(get_current_user), db: Session = Depends(get_
     except ImportError:
         library = False
     configured = bool(os.getenv("VAPID_PRIVATE_KEY") and os.getenv("VAPID_PUBLIC_KEY"))
+    from ..notify_mail import email_notification
+
+    mail = email_notification(db, user.id, note.title, note.body)
+    mail_text = {
+        "en_cours": " E-mail envoyé à ton adresse (boîte de test locale si le serveur d'envoi est Mailpit).",
+        "sans_serveur": " E-mail non envoyé : aucun serveur d'envoi n'est configuré (SMTP_HOST vide).",
+        "limite": " E-mail non envoyé : limite de 10 par jour atteinte.",
+        "desactive": "",
+    }[mail]
+    push_text = "Notification enregistrée." if configured and library else "Push indisponible : clé VAPID ou bibliothèque absente. La notification est dans l'application."
     return {
         "ok": True,
         "dans_l_application": True,
         "push": configured and library,
-        "detail": "Notification enregistrée." if configured and library else "Push indisponible : clé VAPID ou bibliothèque absente. La notification est dans l'application.",
+        "email": mail,
+        "detail": push_text + mail_text,
     }
 
 

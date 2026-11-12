@@ -19,6 +19,7 @@ Secrets : `.env`, `.env.*` (dont `.env.bak`) sont ignorés par Git, seul `.env.e
 ## Risques résiduels
 
 - Rate limit en mémoire, par processus : un redémarrage le remet à zéro.
+- E-mails de notification (option du profil, désactivée par défaut) : au plus 10 par compte et par jour, compteur en mémoire lui aussi. Le sujet est ramené sur une seule ligne (les titres viennent de Yahoo) ; le journal ne contient que l'adresse masquée, jamais le texte du message.
 - `JWT_SECRET` et mot de passe Postgres de développement présents dans `.env.example` : valeurs locales documentées, à changer avant tout hébergement réel de l'API.
 - `COOKIE_SECURE=false` en HTTP local ; doit être `true` derrière HTTPS.
 - Push web : `pywebpush` est dans `requirements.txt` (version épinglée), mais les clés VAPID ne sont pas configurées → notifications dans l'application uniquement ; l'envoi push réel n'a pas été testé.

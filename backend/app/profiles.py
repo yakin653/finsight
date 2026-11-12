@@ -21,7 +21,8 @@ def clean_list(values: list[str] | None, *, limit: int, item_max: int) -> list[s
 
 
 def default_notif_prefs() -> dict:
-    return {"frequence": "instantane", "heure": 8, "quiet_start": 22, "quiet_end": 7}
+    # email : recopier chaque notification par e-mail, session ouverte ou non. Désactivé tant que l'utilisateur ne le demande pas.
+    return {"frequence": "instantane", "heure": 8, "quiet_start": 22, "quiet_end": 7, "email": False}
 
 
 def clean_prefs(raw: dict | None) -> dict:
@@ -35,4 +36,6 @@ def clean_prefs(raw: dict | None) -> dict:
         value = raw.get(key)
         if isinstance(value, int) and 0 <= value <= 23:
             prefs[key] = value
+    if isinstance(raw.get("email"), bool):
+        prefs["email"] = raw["email"]
     return prefs
