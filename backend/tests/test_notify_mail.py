@@ -14,22 +14,23 @@ ORIGIN = {"Origin": "http://localhost:3000"}
 PROFILE = {"level": "debutant", "horizon": "long", "risk_tolerance": "prudent", "language": "fr", "onboarding_completed": True}
 
 
-class _SyncThread:
-    """Exécute l'envoi tout de suite, pour pouvoir l'observer."""
-
-    def __init__(self, target, args=(), daemon=None):
-        self._target, self._args = target, args
-
-    def start(self):
-        self._target(*self._args)
-
-
 @pytest.fixture
 def sent(monkeypatch):
     messages: list[tuple[str, str, str]] = []
+
+    def _capture(email, subject, body):
+        messages.append((email, subject, body))
+        return None
+
+    def _put_sync(item):
+        email, subject, body = item
+        notify_mail._try_send(email, subject, body)
+
     monkeypatch.setenv("SMTP_HOST", "mailpit")
-    monkeypatch.setattr(notify_mail, "_try_send", lambda email, subject, body: messages.append((email, subject, body)))
-    monkeypatch.setattr(notify_mail.threading, "Thread", _SyncThread)
+    monkeypatch.setattr(notify_mail, "_try_send", _capture)
+    # Pas de fil d'attente asynchrone dans les tests : envoi immédiat.
+    monkeypatch.setattr(notify_mail, "_ensure_worker", lambda: None)
+    monkeypatch.setattr(notify_mail._MAIL_Q, "put", _put_sync)
     notify_mail._SENT.clear()
     yield messages
     notify_mail._SENT.clear()

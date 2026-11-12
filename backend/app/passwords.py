@@ -101,12 +101,17 @@ def _mask(email: str) -> str:
 
 
 def _send_email(email: str, subject: str, body: str) -> None:
+    from email.utils import formataddr, make_msgid
+
     host, port = _smtp_target()
     user = os.getenv("SMTP_USER", "").strip()
+    sender = _sender()
     message = EmailMessage()
     message["Subject"] = subject
-    message["From"] = _sender()
+    # Nom affiché : plus facile à retrouver dans Gmail (et dans Envoyés).
+    message["From"] = formataddr(("MarketPulse", sender))
     message["To"] = email
+    message["Message-ID"] = make_msgid(domain=sender.split("@")[-1] if "@" in sender else "localhost")
     message.set_content(body)
     context = ssl.create_default_context()
     if port == 465:

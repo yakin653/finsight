@@ -127,10 +127,17 @@ def push_test(user: User = Depends(get_current_user), db: Session = Depends(get_
         library = False
     configured = bool(os.getenv("VAPID_PRIVATE_KEY") and os.getenv("VAPID_PUBLIC_KEY"))
     from ..notify_mail import email_notification
+    from ..passwords import mail_mode
 
     mail = email_notification(db, user.id, note.title, note.body)
+    if mail_mode() == "local":
+        en_cours = " E-mail envoyé à la boîte de test locale (Mailpit), pas à ta vraie boîte."
+    elif mail_mode() == "smtp":
+        en_cours = " E-mail envoyé à ton adresse Gmail (vérifie aussi Spam)."
+    else:
+        en_cours = " E-mail non envoyé : aucun serveur d'envoi configuré."
     mail_text = {
-        "en_cours": " E-mail envoyé à ton adresse (boîte de test locale si le serveur d'envoi est Mailpit).",
+        "en_cours": en_cours,
         "sans_serveur": " E-mail non envoyé : aucun serveur d'envoi n'est configuré (SMTP_HOST vide).",
         "limite": " E-mail non envoyé : limite de 10 par jour atteinte.",
         "desactive": "",
